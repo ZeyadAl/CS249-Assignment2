@@ -1,6 +1,6 @@
 # CS249-Assignment2
 
-##The report is `cs249_assembly_report.pdf`
+The report is `cs249_assembly_report.pdf`
 
 ## Task 1
 the files exist in the corresponding directory.
