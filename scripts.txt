@@ -1,0 +1,45 @@
+For Hifiasm:
+    hifiasm -o scincus_asm -t $SLURM_CPUS_PER_TASK \
+      --ul ../real_data/SRR32302812.fastq \
+      --h1 ../real_data/SRR32302809_1.fastq \
+      --h2 ../real_data/SRR32302809_2.fastq \
+      ../real_data/SRR32302813.fastq \
+      ../real_data/SRR32302814.fastq
+
+
+For QUAST:
+    quast.py -o quast_comparison_output \
+        -R ../../synthetic_dataset/GCF_000901155.1_ViralProj183710_genomic.fna \
+        olc_results/contigs_no_error_ont_hq_50x.fastq \
+        olc_results/contigs_no_error_reads_hiseq_5k.fastq \
+        olc_results/contigs_ont_hq_50x.fastq \
+        olc_results/contigs_reads_hiseq_5k.fastq
+
+
+BUSCO:
+    busco \
+      -i main.fasta \
+      -o busco_auto \
+      --mode genome \
+      --auto-lineage \
+      --cpu 24
+
+
+Merqury:
+    meryl count k=21 threads=32 output db_from_all.meryl   \
+    /ibex/reference/course/cs249/lizard/input/hic/lizard_hic_R1.fastq.gz \
+    /ibex/reference/course/cs249/lizard/input/hic/lizard_hic_R2.fastq.gz \
+    /ibex/reference/course/cs249/lizard/input/ont/lizard_ont.fastq.gz \
+    /ibex/reference/course/cs249/lizard/input/pacbio/lizard_liver.fastq.gz
+
+    export MERQURY_THREADS=32
+    merqury.sh db_from_all.meryl ../../main.fasta ALL
+
+
+Inspector:
+    inspector.py -c ../main.fa \
+    -r /ibex/reference/course/cs249/lizard/input/pacbio/lizard_liver.fastq.gz \
+    /ibex/reference/course/cs249/lizard/input/ont/lizard_ont.fastq.gz \
+    /ibex/reference/course/cs249/lizard/input/hic/lizard_hic_R1.fastq.gz \
+    /ibex/reference/course/cs249/lizard/input/hic/lizard_hic_R2.fastq.gz \
+    -o inspector_out/ --datatype mixed -t 64

@@ -1,0 +1,57 @@
+All statistics are based on contigs of size >= 500 bp, unless otherwise noted (e.g., "# contigs (>= 0 bp)" and "Total length (>= 0 bp)" include all contigs).
+
+Assembly                     contigs_no_error_ont_hq_50x.fastq  contigs_no_error_reads_hiseq_5k.fastq  contigs_ont_hq_50x.fastq  contigs_reads_hiseq_5k.fastq
+# contigs (>= 0 bp)          1                                  1                                      1                         1                           
+# contigs (>= 1000 bp)       1                                  1                                      1                         1                           
+# contigs (>= 5000 bp)       1                                  1                                      1                         1                           
+# contigs (>= 10000 bp)      1                                  1                                      1                         1                           
+# contigs (>= 25000 bp)      1                                  1                                      1                         1                           
+# contigs (>= 50000 bp)      1                                  0                                      1                         1                           
+Total length (>= 0 bp)       258446                             30215                                  1505388                   102372                      
+Total length (>= 1000 bp)    258446                             30215                                  1505388                   102372                      
+Total length (>= 5000 bp)    258446                             30215                                  1505388                   102372                      
+Total length (>= 10000 bp)   258446                             30215                                  1505388                   102372                      
+Total length (>= 25000 bp)   258446                             30215                                  1505388                   102372                      
+Total length (>= 50000 bp)   258446                             0                                      1505388                   102372                      
+# contigs                    1                                  1                                      1                         1                           
+Largest contig               258446                             30215                                  1505388                   102372                      
+Total length                 258446                             30215                                  1505388                   102372                      
+Reference length             30119                              30119                                  30119                     30119                       
+GC (%)                       40.97                              41.30                                  40.84                     41.16                       
+Reference GC (%)             41.24                              41.24                                  41.24                     41.24                       
+N50                          258446                             30215                                  1505388                   102372                      
+NG50                         258446                             30215                                  1505388                   102372                      
+N90                          258446                             30215                                  1505388                   102372                      
+NG90                         258446                             30215                                  1505388                   102372                      
+auN                          258446.0                           30215.0                                1505388.0                 102372.0                    
+auNG                         2217681.0                          30311.3                                75241310.5                347954.0                    
+L50                          1                                  1                                      1                         1                           
+LG50                         1                                  1                                      1                         1                           
+L90                          1                                  1                                      1                         1                           
+LG90                         1                                  1                                      1                         1                           
+# misassemblies              17                                 4                                      118                       0                           
+# misassembled contigs       1                                  1                                      1                         0                           
+Misassembled contigs length  258446                             30215                                  1505388                   0                           
+# local misassemblies        0                                  3                                      3                         0                           
+# scaffold gap ext. mis.     0                                  0                                      0                         0                           
+# scaffold gap loc. mis.     0                                  0                                      0                         0                           
+# unaligned mis. contigs     0                                  0                                      0                         1                           
+# unaligned contigs          0 + 0 part                         0 + 0 part                             0 + 1 part                0 + 1 part                  
+Unaligned length             0                                  0                                      388167                    57449                       
+Genome fraction (%)          98.768                             97.892                                 98.655                    88.452                      
+Duplication ratio            8.687                              1.024                                  37.599                    1.692                       
+# N's per 100 kbp            0.00                               0.00                                   0.00                      0.00                        
+# mismatches per 100 kbp     0.00                               0.00                                   493.38                    423.66                      
+# indels per 100 kbp         0.00                               0.00                                   1463.03                   15.53                       
+Largest alignment            25603                              19101                                  20561                     1270                        
+Total aligned length         258424                             30196                                  1117202                   45083                       
+NA50                         16920                              19101                                  8755                      -                           
+NGA50                        25603                              19101                                  20561                     526                         
+NA90                         9605                               2419                                   -                         -                           
+NGA90                        25582                              2419                                   20434                     349                         
+auNA                         17495.5                            14265.2                                7382.5                    204.5                       
+auNGA                        150125.9                           14310.7                                368988.2                  695.2                       
+LA50                         6                                  1                                      74                        -                           
+LGA50                        1                                  1                                      1                         21                          
+LA90                         15                                 3                                      -                         -                           
+LGA90                        2                                  3                                      2                         50                          
