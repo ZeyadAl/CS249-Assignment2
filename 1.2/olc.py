@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
 import argparse
-from collections import defaultdict, Counter, deque
-import pprint
+from collections import defaultdict, deque
 
 def parse_fastq(fq_file):
-    """Parse a FASTQ file and return a dict of header->sequence."""
     reads = {}
     with open(fq_file) as f:
         while True:
@@ -12,57 +10,37 @@ def parse_fastq(fq_file):
             if not header:
                 break
             seq = f.readline().strip()
-            f.readline()  # plus line
-            f.readline()  # quality line
+            f.readline()
+            f.readline()
             reads[header] = seq
     return reads
 
 def overlap(a: str, b: str, min_length: int) -> int:
-    """
-    Return length of longest suffix of 'a' matching a prefix of 'b'
-    that is at least 'min_length'. Returns 0 if no such overlap.
-    """
-    start = 0  # start index for searching in a
+    start = 0
     while True:
-        # find occurrence of b's first min_length bases in a
         start = a.find(b[:min_length], start)
         if start == -1:
             return 0
-        # if the rest of a from 'start' matches the beginning of b
         if b.startswith(a[start:]):
             return len(a) - start
         start += 1
 
 def build_overlap_graph(reads: dict[str, str], min_overlap: int) -> dict[str, list[tuple[str, int]]]:
-    """
-    Given a dict of reads and a minimum overlap length, 
-    return an overlap graph:
-      { read_id: [(other_read_id, overlap_len), ...], ... }
-    
-    For error-free reads, we want to find all valid overlaps.
-    """
     graph = defaultdict(list)
-    
-    # For each pair of reads, find their overlap
     for id_a, seq_a in reads.items():
         for id_b, seq_b in reads.items():
             if id_a == id_b:
                 continue
-                
             olen = overlap(seq_a, seq_b, min_overlap)
             if olen > 0:
                 graph[id_a].append((id_b, olen))
-    
-    # Sort edges by overlap length (descending)
     for node in graph:
         graph[node].sort(key=lambda x: x[1], reverse=True)
-    
-    # Ensure all reads appear in the graph
     for read_id in reads:
         if read_id not in graph:
             graph[read_id] = []
-            
     return dict(graph)
+
 
 def find_hamiltonian_path(graph: dict[str, list[tuple[str, int]]]) -> list[str]:
     """
@@ -129,7 +107,6 @@ def find_hamiltonian_path(graph: dict[str, list[tuple[str, int]]]) -> list[str]:
         # If we've visited all nodes, we're done
         if len(visited) == len(graph):
             return path
-    
     # After trying all start nodes, we have our best approximation
     remaining_nodes = set(graph.keys()) - set(best_path)
     
@@ -305,111 +282,228 @@ def connect_paths(paths: list[list[str]],
     
     return merged_paths
 
-def assemble_contigs(
-    paths: list[list[str]],
-    reads: dict[str, str],
-    graph: dict[str, list[tuple[str, int]]]
-) -> dict[str, str]:
-    """
-    Given contig paths and the original reads + overlap graph, build
-    each contig sequence by merging along the overlaps.
-    """
-    # Build quick lookup for overlap lengths
-    overlap_len = {}
-    for u, edges in graph.items():
-        for v, olen in edges:
-            overlap_len[(u, v)] = olen
-
+def assemble_contigs(paths: list[list[str]], reads: dict[str, str], graph: dict[str, list[tuple[str,int]]]) -> dict[str, str]:
+    overlap_len = { (u,v):olen for u, edges in graph.items() for v, olen in edges }
     contigs = {}
     for idx, path in enumerate(paths, start=1):
-        if not path:  # Skip empty paths
+        if not path:
             continue
-            
         if len(path) == 1:
-            # Path with single read
             contigs[f"contig_{idx}"] = reads[path[0]]
         else:
-            # Path with multiple reads
             seq = reads[path[0]]
-            
-            # For each pair of consecutive reads
-            for i in range(len(path) - 1):
-                prev, curr = path[i], path[i + 1]
-                
-                # If we have a stored overlap length, use it
-                olen = overlap_len.get((prev, curr), 0)
-                
-                # If no stored overlap, compute it
+            for i in range(len(path)-1):
+                u, v = path[i], path[i+1]
+                olen = overlap_len.get((u,v), 0)
                 if olen == 0:
-                    olen = overlap(reads[prev], reads[curr], 1)
-                
-                # Append only the non-overlapping suffix
+                    olen = overlap(reads[u], reads[v], 1)
                 if olen > 0:
-                    seq += reads[curr][olen:]
+                    seq += reads[v][olen:]
                 else:
-                    # If no overlap found, just append the whole sequence
-                    # (this shouldn't happen with error-free reads, but as a safety measure)
-                    seq += reads[curr]
-            
+                    seq += reads[v]
             contigs[f"contig_{idx}"] = seq
-    
     return contigs
 
-def write_fasta(contigs, out_file):
-    """Write contigs to a FASTA file."""
+def write_fasta(contigs: dict[str,str], out_file: str):
     with open(out_file, 'w') as f:
         for cid, seq in contigs.items():
             f.write(f'>{cid}\n')
-            if cid == "contig_1":
-                print(f"forst contig length is {len(seq)}")
             for i in range(0, len(seq), 80):
                 f.write(seq[i:i+80] + '\n')
 
-def write_gfa(reads: dict[str, str],
-              graph: dict[str, list[tuple[str,int]]],
-              filename: str) -> None:
+def remove_transitive_edges(graph: dict[str, list[tuple[str,int]]]) -> dict[str, list[tuple[str,int]]]:
+    graph = {u: list(edges) for u, edges in graph.items()}
+    while True:
+        neighbors = {u: {v for v, _ in edges} for u, edges in graph.items()}
+        removed_one = False
+        for u, edges in graph.items():
+            for v, w in list(edges):
+                for mid in neighbors[u]:
+                    if mid != v and v in neighbors.get(mid, ()):
+                        graph[u].remove((v, w))
+                        removed_one = True
+                        break
+                if removed_one:
+                    break
+            if removed_one:
+                break
+        if not removed_one:
+            break
+    return graph
+
+def find_max_weight_hamiltonian_path(graph: dict[str, list[tuple[str,int]]]) -> tuple[list[str], int]:
     """
-    Write reads + overlap graph out in GFA v1 format.
+    Held–Karp DP for exact max‐weight Hamiltonian path (feasible for n≲20).
+    Returns (best_path, best_weight).
     """
-    with open(filename, 'w') as gfa:
-        # Header
-        gfa.write("H\tVN:Z:1.0\n")
-        # Segments
-        for rid, seq in reads.items():
-            gfa.write(f"S\t{rid}\t{seq}\n")
-        # Links
-        for src, out_edges in graph.items():
-            for dst, olen in out_edges:
-                # '+' orientation for both ends, CIGAR = "<overlap>M"
-                gfa.write(f"L\t{src}\t+\t{dst}\t+\t{olen}M\n")
+    nodes = list(graph.keys())
+    n = len(nodes)
+    idx = {u:i for i,u in enumerate(nodes)}
+    wmat = [[0]*n for _ in range(n)]
+    for u, edges in graph.items():
+        ui = idx[u]
+        for v, weight in edges:
+            wmat[ui][idx[v]] = weight
+
+    Nmask = 1 << n
+    dp = [[-float('inf')]*n for _ in range(Nmask)]
+    parent = [[None]*n for _ in range(Nmask)]
+
+    for i in range(n):
+        dp[1<<i][i] = 0
+
+    for mask in range(Nmask):
+        for u in range(n):
+            if not (mask & (1<<u)): 
+                continue
+            base = dp[mask][u]
+            if base == -float('inf'):
+                continue
+            for v in range(n):
+                if mask & (1<<v):
+                    continue
+                nm = mask | (1<<v)
+                val = base + wmat[u][v]
+                if val > dp[nm][v]:
+                    dp[nm][v] = val
+                    parent[nm][v] = u
+
+    full = (1<<n) - 1
+    best_w = max(dp[full])
+    end = dp[full].index(best_w)
+
+    path_idx = []
+    mask, node = full, end
+    while node is not None:
+        path_idx.append(node)
+        prev = parent[mask][node]
+        mask ^= (1<<node)
+        node = prev
+    path_idx.reverse()
+    return [nodes[i] for i in path_idx], best_w
+
+def ont_find_hamiltonian_path(graph: dict[str, list[tuple[str,int]]], threshold=20) -> list[str]:
+    """
+    Wrapper: exact DP if |V|≤threshold, else greedy heuristic.
+    """
+    if len(graph) <= threshold:
+        path, w = find_max_weight_hamiltonian_path(graph)
+        return path
+
+    best_path, best_w = [], -1
+    for start in graph:
+        visited = {start}
+        path = [start]
+        total = 0
+        while True:
+            choices = [(weight, nbr) for nbr, weight in graph[path[-1]] if nbr not in visited]
+            if not choices:
+                break
+            weight, nbr = max(choices)
+            path.append(nbr)
+            visited.add(nbr)
+            total += weight
+        if total > best_w:
+            best_w, best_path = total, path
+    return best_path
 
 def main():
-    parser = argparse.ArgumentParser(description='OLC assembler optimized for error-free reads')
+    parser = argparse.ArgumentParser(description='OLC assembler optimized for error-free reads with max-weight Hamiltonian path')
+    parser.add_argument('--ont', action='store_true',
+                        help='Use ONT mode: remove transitive edges & exact/heuristic DP path')
     parser.add_argument('fastq', nargs='+', help='Input FASTQ files')
     parser.add_argument('-n', '--min_overlap', type=int, default=2, help='Minimum overlap length')
     parser.add_argument('-o', '--out', default='contigs.fasta', help='Output FASTA file')
-    parser.add_argument('--gfa', help='Optional GFA output file')
     args = parser.parse_args()
 
-    # Parse reads from all input FASTQ files
+    # 1) parse reads
     reads = {}
     for fq in args.fastq:
         reads.update(parse_fastq(fq))
+
+    # 2) build and reduce overlap graph
+    graph     = build_overlap_graph(reads, args.min_overlap)
+    if args.ont:
+        red_graph = remove_transitive_edges(graph)
+
+        # 3) find best Hamiltonian path
+        best_path = ont_find_hamiltonian_path(red_graph)
+
+        # 4) assemble a single contig from that path
+        contig_dict = assemble_contigs([best_path], reads, red_graph)
+
+        # 5) write output
+        write_fasta(contig_dict, args.out)
+        length = len(next(iter(contig_dict.values())))
+        print(f'Wrote 1 contig (length={length}) to {args.out}')
+    else:
+        #ham_path = find_hamiltonian_path(graph)
+        # First try to find paths using classic OLC approach
+        paths = []
+        visited = set()
+        
+        # Start from nodes with no incoming edges
+        in_degree = defaultdict(int)
+        for node, edges in graph.items():
+            for target, _ in edges:
+                in_degree[target] += 1
+        
+        start_nodes = [node for node in graph if in_degree[node] == 0]
+        
+        # If no clear starting points, use nodes with high out-degree
+        if not start_nodes:
+            nodes_by_outdegree = sorted(graph.keys(), 
+                                       key=lambda n: len(graph[n]), 
+                                       reverse=True)
+            start_nodes = nodes_by_outdegree[:max(1, len(nodes_by_outdegree) // 10)]
+        
+        # Create initial paths
+        for start in start_nodes:
+            if start in visited:
+                continue
+                
+            path = [start]
+            visited.add(start)
+            current = start
+            
+            # Extend the path
+            while True:
+                next_nodes = [(node, olen) for node, olen in graph.get(current, []) 
+                              if node not in visited]
+                              
+                if not next_nodes:
+                    break
+                    
+                # Choose the highest overlap
+                next_nodes.sort(key=lambda x: x[1], reverse=True)
+                next_node = next_nodes[0][0]
+                
+                path.append(next_node)
+                visited.add(next_node)
+                current = next_node
+            
+            paths.append(path)
+        
+        # Handle unvisited nodes
+        for node in graph:
+            if node not in visited:
+                paths.append([node])
+                visited.add(node)
+        
+        # Try to connect these paths
+        paths = connect_paths(paths, graph, reads, args.min_overlap)
+        
+            
+        # Assemble contigs from these paths
+        contigs = assemble_contigs(paths, reads, graph)
+
     
-    graph = build_overlap_graph(reads, args.min_overlap)
-    ham_path = find_hamiltonian_path(graph)
+        #contigs = assemble_contigs([ham_path], reads, graph)
     
-    contigs = assemble_contigs([ham_path], reads, graph)
+        # Write contigs to FASTA file
+        write_fasta(contigs, args.out)
     
-    # Write contigs to FASTA file
-    write_fasta(contigs, args.out)
-    
-    print(f'Wrote {len(contigs)} contigs to {args.out}')
-    
-    # Optionally write GFA file
-    if args.gfa:
-        write_gfa(reads, graph, args.gfa)
-        print(f'Wrote overlap graph to {args.gfa}')
+        print(f'Wrote {len(contigs)} contigs to {args.out}')
 
 if __name__ == '__main__':
     main()
