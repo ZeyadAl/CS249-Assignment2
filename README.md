@@ -1,5 +1,7 @@
 # CS249-Assignment2
 
+##The report is `cs249_assembly_report.pdf`
+
 ## Task 1
 the files exist in the corresponding directory.
 ### 1.1 dbg.py
