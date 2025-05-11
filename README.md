@@ -90,3 +90,6 @@ Otherwise, everything is explained in the report.
 
 ### 2.1
 To assemble the genome run the hifiasm script from the `script.txt` file.
+
+### 2.2
+To run QUAST, BUSCO, Merqury, and Inspector run the corresponding script from the `script.txt` file.
