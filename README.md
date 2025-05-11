@@ -5,7 +5,7 @@ the files exist in the corresponding directory.
 ### 1.1 dbg.py
 To run the script use the following command:
 
-`./dbg.py -i \<input-file\> -k \<value-of-k\> -o \<contigs-output-file\> -g \<graph-output-file\>`
+`./dbg.py -i <input-file> -k <value-of-k> -o <contigs-output-file> -g <graph-output-file>`
 
 Example output:
 ```
